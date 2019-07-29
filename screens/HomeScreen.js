@@ -9,13 +9,85 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Audio } from 'expo-av';
 
+import { Audio } from 'expo-av';
 import { MonoText } from '../components/StyledText';
 
-export default function HomeScreen() {
-  return (
-    <View style={styles.container}>
+const source = require('../assets/sounds/music/dbmusic1.m4a');
+
+export default class HomeScreen extends React.Component {
+  state = {
+    playingStatus: "reproducir",
+  };
+
+  async _playRecording() {
+    const { sound } = await Audio.Sound.createAsync(
+      source,
+      {
+        shouldPlay: true,
+        isLooping: true,
+      },
+      this._updateScreenForSoundStatus,
+    );
+    this.sound = sound;
+    this.setState({
+      playingStatus: 'reproduciendo'
+    });
+  }
+
+  _updateScreenForSoundStatus = (status) => {
+    if (status.isPlaying && this.state.playingStatus !== "reproduciendo") {
+      this.setState({ playingStatus: "reproduciendo" });
+    } else if (!status.isPlaying && this.state.playingStatus === "reproduciendo") {
+      this.setState({ playingStatus: "pausado" });
+    }
+  };
+  
+  async _pauseAndPlayRecording() {
+    if (this.sound != null) {
+      if (this.state.playingStatus == 'reproduciendo') {
+        console.log('pausing...');
+        await this.sound.pauseAsync();
+        console.log('paused!');
+        this.setState({
+          playingStatus: 'pausado',
+        });
+      } else {
+        console.log('reproduciendo...');
+        await this.sound.playAsync();
+        console.log('reproduciendo!');
+        this.setState({
+          playingStatus: 'reproduciendo',
+        });
+      }
+    }
+  }
+  
+  _syncPauseAndPlayRecording() {
+    if (this.sound != null) {
+      if (this.state.playingStatus == 'reproduciendo') {
+        this.sound.pauseAsync();
+      } else {
+        this.sound.playAsync();
+      }
+    }
+  }
+  
+  _playAndPause = () => {
+    switch (this.state.playingStatus) {
+      case 'reproducir':
+        this._playRecording();
+        break;
+      case 'pausado':
+      case 'reproduciendo':
+        this._pauseAndPlayRecording();
+        break;
+    }
+  }
+
+  render() {
+    return (
+      <View style={styles.container}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.contentContainer}>
@@ -30,8 +102,13 @@ export default function HomeScreen() {
           />
         </View>
 
+        <TouchableOpacity style={styles.button} onPress={this._playAndPause}>
+          <Text style={styles.buttonText}>
+            {this.state.playingStatus}
+          </Text>
+        </TouchableOpacity>
+
         <View style={styles.getStartedContainer}>
-          <DevelopmentModeNotice />
 
           <Text style={styles.getStartedText}>Get started by opening</Text>
 
@@ -43,14 +120,6 @@ export default function HomeScreen() {
           <Text style={styles.getStartedText}>
             Change this text and your app will automatically reload.
           </Text>
-        </View>
-
-        <View style={styles.helpContainer}>
-          <TouchableOpacity onPress={handleHelpPress} style={styles.helpLink}>
-            <Text style={styles.helpLinkText}>
-              Help, it didn’t automatically reload!
-            </Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -68,46 +137,12 @@ export default function HomeScreen() {
       </View>
     </View>
   );
+  }
 }
 
 HomeScreen.navigationOptions = {
   header: null,
 };
-
-function DevelopmentModeNotice() {
-  if (__DEV__) {
-    const learnMoreButton = (
-      <Text onPress={handleLearnMorePress} style={styles.helpLinkText}>
-        Learn more
-      </Text>
-    );
-
-    return (
-      <Text style={styles.developmentModeText}>
-        Development mode is enabled: your app will be slower but you can use
-        useful development tools. {learnMoreButton}
-      </Text>
-    );
-  } else {
-    return (
-      <Text style={styles.developmentModeText}>
-        You are not in development mode: your app will run at full speed.
-      </Text>
-    );
-  }
-}
-
-function handleLearnMorePress() {
-  WebBrowser.openBrowserAsync(
-    'https://docs.expo.io/versions/latest/workflow/development-mode/'
-  );
-}
-
-function handleHelpPress() {
-  WebBrowser.openBrowserAsync(
-    'https://docs.expo.io/versions/latest/workflow/up-and-running/#cant-see-your-changes'
-  );
-}
 
 const styles = StyleSheet.create({
   container: {
@@ -197,3 +232,4 @@ const styles = StyleSheet.create({
     color: '#2e78b7',
   },
 });
+
